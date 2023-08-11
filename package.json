@@ -7,9 +7,10 @@
     "test": "echo \"No tests yet...\""
   },
   "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.0.13",
     "axios": "^1.4.0",
     "azure-cli": "^0.10.20",
-    "@ffmpeg-installer/ffmpeg": "^1.0.13",
-    "fluent-ffmpeg": "^2.1.2"
+    "fluent-ffmpeg": "^2.1.2",
+    "videoshow": "^0.1.12"
   }
 }

@@ -8,7 +8,8 @@ This Azure Functions API generates a video from a list of image URLs provided by
 
 **Request Body:**
 
-```{
+```
+{
     "imageUrls": [
         "URL1",
         "URL2",

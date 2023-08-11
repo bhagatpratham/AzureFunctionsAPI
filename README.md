@@ -2,7 +2,7 @@
 
 This Azure Functions API generates a video from a list of image URLs provided by the user.
 
-**Endpoint:** http://VideoGenerator.azurewebsites.net/api/VideoGenerator
+**Endpoint:** https://videogenerator.azurewebsites.net/api/VideoGenerator
 
 **HTTP Method:** POST
 

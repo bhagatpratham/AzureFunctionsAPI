@@ -14,6 +14,7 @@ module.exports = async function (context, req) {
     const imageUrls = req.body.imageUrls;
     const timeInBetween = parseFloat(req.query.time_in_between) || 1.0;
 
+    // Checking if valid image URLs are provided
     if (!imageUrls || !Array.isArray(imageUrls)) {
       context.res = {
         status: 400,
@@ -22,6 +23,7 @@ module.exports = async function (context, req) {
       return;
     }
 
+    // Creating a temporary directory for storing images and videos
     const tempDir = path.join(
       context.executionContext.functionDirectory,
       "temp"
@@ -32,15 +34,18 @@ module.exports = async function (context, req) {
       // Directory already exists, which is fine
     }
 
+    // Download and save images
     const downloadedImages = await Promise.all(
       imageUrls.map(async (imageUrl, index) => {
         try {
+          context.log("Downloading Image:", imageUrl);
           const response = await axios.get(imageUrl, {
             responseType: "arraybuffer",
           });
-          const imageName = `image_${index + 1}.jpg`;
+          const imageName = `image_${index + 1}.png`;
           const imagePath = path.join(tempDir, imageName);
           await fs.writeFile(imagePath, response.data);
+          context.log("Image Successfully Downloaded:", imagePath);
           return imagePath;
         } catch (error) {
           context.log(`Error downloading ${imageUrl}: ${error.message}`);
@@ -48,21 +53,25 @@ module.exports = async function (context, req) {
         }
       })
     );
+    context.log("Downloaded Images:", downloadedImages);
 
+    // Output video path
     const outputVideoPath = path.join(tempDir, "output.mp4");
 
-    const ffmpegCommand = ffmpeg();
-    for (let i = 0; i < downloadedImages.length + 1; i++) {
-      if (downloadedImages[i]) {
-        ffmpegCommand
-          .input(downloadedImages[i])
-          .inputOptions("-framerate", `${1 / timeInBetween}`);
-      }
+    // FFmpeg command for video generation
+    let ffmpegCommand = ffmpeg();
+    for (let i = 0; i < downloadedImages.length; i++) {
+      context.log("Creating Video with Image:", downloadedImages[i]);
+      ffmpegCommand
+        .input(downloadedImages[i])
+        .inputOptions(["-framerate", `1/${timeInBetween}`])
+        .inputFormat("image2")
+        .videoCodec("libx264")
+        .outputOptions(["-pix_fmt", "yuv420p"]);
     }
 
+    // Executing FFmpeg command
     ffmpegCommand
-      .videoCodec("libx264")
-      .outputOptions("-pix_fmt", "yuv420p")
       .output(outputVideoPath)
       .on("end", () => {
         context.log("Video generation successful.");
@@ -77,7 +86,6 @@ module.exports = async function (context, req) {
           status: 500,
           body: "Error generating video: " + err.message,
         };
-        context.done();
       })
       .run();
   } catch (error) {
@@ -86,6 +94,5 @@ module.exports = async function (context, req) {
       status: 500,
       body: "An error occurred: " + error.message,
     };
-    context.done();
   }
 };

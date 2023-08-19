@@ -23,17 +23,6 @@ module.exports = async function (context, req) {
       return;
     }
 
-    // Creating a temporary directory for storing images and videos
-    const tempDir = path.join(
-      context.executionContext.functionDirectory,
-      "temp"
-    );
-    try {
-      await fs.mkdir(tempDir);
-    } catch (error) {
-      // Directory already exists, which is fine
-    }
-
     // Download and save images
     const downloadedImages = await Promise.all(
       imageUrls.map(async (imageUrl, index) => {
@@ -42,8 +31,8 @@ module.exports = async function (context, req) {
           const response = await axios.get(imageUrl, {
             responseType: "arraybuffer",
           });
-          const imageName = `image_${index + 1}.png`;
-          const imagePath = path.join(tempDir, imageName);
+          const imageName = `img00${index + 1}.png`;
+          const imagePath = path.join(imageName);
           await fs.writeFile(imagePath, response.data);
           context.log("Image Successfully Downloaded:", imagePath);
           return imagePath;
@@ -56,37 +45,16 @@ module.exports = async function (context, req) {
     context.log("Downloaded Images:", downloadedImages);
 
     // Output video path
-    const outputVideoPath = path.join(tempDir, "output.mp4");
-
+    const outputVideoPath = "output.mp4";
+    const inputPattern = "img%03d.png";
     // FFmpeg command for video generation
     let ffmpegCommand = ffmpeg();
-    for (let i = 0; i < downloadedImages.length; i++) {
-      context.log("Creating Video with Image:", downloadedImages[i]);
-      ffmpegCommand
-        .input(downloadedImages[i])
-        .inputOptions(["-framerate", `1/${timeInBetween}`])
-        .inputFormat("image2")
-        .videoCodec("libx264")
-        .outputOptions(["-pix_fmt", "yuv420p"]);
-    }
 
-    // Executing FFmpeg command
     ffmpegCommand
+      .addInput(inputPattern)
+      .addInputOption("-framerate 20")
+      .inputOptions(["-framerate", `1/${timeInBetween}`])
       .output(outputVideoPath)
-      .on("end", () => {
-        context.log("Video generation successful.");
-        context.res = {
-          status: 200,
-          body: "Video generation and cleanup successful.",
-        };
-      })
-      .on("error", (err) => {
-        context.log.error("Error generating video:", err.message);
-        context.res = {
-          status: 500,
-          body: "Error generating video: " + err.message,
-        };
-      })
       .run();
   } catch (error) {
     context.log.error("An error occurred:", error.message);
